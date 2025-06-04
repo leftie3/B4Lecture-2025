@@ -12,11 +12,24 @@ from scipy.stats import multivariate_normal
 
 
 class GMMVB:
+    """
+    Class that implements Variational Bayesian Inference for GMMs.
+
+    Attributes:
+        K (int): The number of clusters.
+        eps (float): Small amounts to prevent overflow and underflow.
+        filename (str): The name of the file where to plot the clustering results.
+        N (int): Number of data samples.
+        D (int): Dimension of data samples.
+
+    """
+
     def __init__(self, K, filename):
         """Constructor.
 
         Args:
             K (int): The number of clusters.
+            filename (str): The name of the file where to plot the clustering results.
 
         Returns:
             None.
