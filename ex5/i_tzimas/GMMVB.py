@@ -27,7 +27,6 @@ class GMMVB:
         self.K = K
         self.eps = np.spacing(1)
         self.filename = filename
-        self.hdi = []
 
     def init_params(self, X):
         """Initialize the parameters.
@@ -53,6 +52,9 @@ class GMMVB:
         self.nu = np.ones(self.K) * self.nu0
         self.m = np.random.randn(self.K, self.D)
         self.W = np.tile(self.W0[None, :, :], (self.K, 1, 1))
+
+        # Highest Density Interval
+        self.hdi = [[0 for _ in range(self.D)] for _ in range(self.K)]
 
     def gmm_pdf(self, X):
         """Calculate the log-likelihood of the D-dimensional mixed Gaussian distribution at N data.
@@ -308,18 +310,43 @@ class GMMVB:
                 break
 
         # Highest Density Interval
+        self._calculate_hdi(X)
 
         # Visualisation
         self.visualize(X)
 
     def _calculate_hdi(self, X):
-        """Calculate the Highest Density Interval (HDI).
+        """Calculate the Highest Density Interval (HDI) for each cluster.
 
         Args:
             X (numpy ndarray): Input data whose size is (N, D).
         Returns:
             None.
         """
+        N_RANDOM_SAMPLES = 100000
+
+        for k in range(self.K):
+
+            # Take 100k random samples of posterior
+            sample_data = multivariate_normal.rvs(
+                self.m[k, : self.D], self.W[k], N_RANDOM_SAMPLES
+            )
+            if len(sample_data.shape) == 1:
+                sample_data = np.expand_dims(sample_data, 1)
+
+            for d in range(self.D):
+                # Sort for a given dimension
+                sample_data_d = np.sort(sample_data[:, d])
+                # Mass is 95%
+                mass = int(N_RANDOM_SAMPLES * 0.95)
+
+                # Calculate L
+                range_i = range(N_RANDOM_SAMPLES - mass)
+                L = [sample_data_d[i + mass] - sample_data_d[i] for i in range_i]
+
+                # Find HDI for current dimension
+                i_s = np.argmin(L)
+                self.hdi[k][d] = [sample_data_d[i_s], sample_data_d[i_s + mass]]
 
 
 if __name__ == "__main__":
