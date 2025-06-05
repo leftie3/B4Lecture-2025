@@ -257,10 +257,19 @@ class GMMVB:
                 self.m[k, : self.D], cov=la.pinv(self.nu[k] * self.W[k])
             )
 
-            # Plot contour
+            # Plot contour and HDI
             if self.D == 1:
                 pdf = pdf.pdf(x_grid)
-                plt.plot(x_grid, pdf, color=cm(k))
+                ax.plot(x_grid, pdf, color=cm(k))
+
+                hdi_mean = np.mean(self.hdi[k][0])
+                ax.bar(
+                    [hdi_mean],
+                    np.max(pdf),
+                    width=np.ptp(self.hdi[k][0]),
+                    color=cm(k),
+                    alpha=0.3,
+                )
             else:
                 pdf = pdf.pdf(np.reshape(xy, (-1, self.D)))
                 ax.contour(
