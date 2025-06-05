@@ -66,6 +66,9 @@ class GMMVB:
         self.m = np.random.randn(self.K, self.D)
         self.W = np.tile(self.W0[None, :, :], (self.K, 1, 1))
 
+        # Highest Density Interval
+        self.hdi = [[0 for _ in range(self.D)] for _ in range(self.K)]
+
     def gmm_pdf(self, X):
         """Calculate the log-likelihood of the D-dimensional mixed Gaussian distribution at N data.
 
@@ -190,7 +193,7 @@ class GMMVB:
             None.
         """
         # Reshape data X if it is in less than 3 dimensions
-        for i in range(X.shape[1], 3):
+        for _ in range(X.shape[1], 3):
             X = np.hstack([X, np.zeros((X.shape[0], 1))])
 
         # Execute classification
@@ -203,13 +206,30 @@ class GMMVB:
         fig.add_axes(ax)
         # Use the custome color list.
         cm = plt.get_cmap("tab10")
+
         # Remove ticks
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_zticks([])
+
         # Change the perspective
         ax.view_init(elev=90, azim=90, roll=180)
-        for k in range(len(label_frequency_desc)):
+
+        # Plot clusters
+        cmaps = ["Blues", "Greens", "Oranges", "YlOrBr"]
+
+        # Meshgrid
+        if self.D == 1:
+            x_grid = np.linspace(np.min(X), np.max(X), 200)
+        else:
+            x_grid, y_grid = np.meshgrid(
+                np.linspace(np.min(X[:, 0]), np.max(X[:, 0]), 200),
+                np.linspace(np.min(X[:, 1]), np.max(X[:, 1]), 200),
+            )
+            xy = np.stack([x_grid.ravel(), y_grid.ravel()]).T
+
+        for _, k in enumerate(label_frequency_desc):
+            # Plot colored data points
             cluster_indexes = np.where(labels == label_frequency_desc[k])[0]
             ax.plot(
                 X[cluster_indexes, 0],
@@ -219,6 +239,41 @@ class GMMVB:
                 ms=0.5,
                 color=cm(k),
             )
+
+            # Plot centroid
+            mean = [self.m[k, i] for i in range(self.D)] + [0] * (3 - self.D)
+            ax.scatter(
+                mean[0],
+                mean[1],
+                mean[2],
+                zorder=3,
+                marker="+",
+                c="lime",
+                s=60,
+            )
+
+            # Calculate the GMM PDF
+            pdf = multivariate_normal(
+                self.m[k, : self.D], cov=la.pinv(self.nu[k] * self.W[k])
+            )
+
+            # Plot contour
+            if self.D == 1:
+                pdf = pdf.pdf(x_grid)
+                plt.plot(x_grid, pdf, color=cm(k))
+            else:
+                pdf = pdf.pdf(np.reshape(xy, (-1, self.D)))
+                ax.contour(
+                    x_grid,
+                    y_grid,
+                    np.reshape(pdf, x_grid.shape),
+                    cmap=cmaps[k],
+                    offset=0,
+                    alpha=0.5,
+                    levels=5,
+                )
+
+        # Save plot to file
         fig.savefig(self.filename)
 
     def execute(self, X, iter_max, thr):
@@ -259,18 +314,52 @@ class GMMVB:
                     )
                 )
             )
-            # Visualization is performed when the convergence condition is met or when the upper
+            # Loop breaks when the convergence condition is met or when the upper
             # limit is reached
             if (np.abs(log_likelihood_list[i] - log_likelihood_list[i + 1]) < thr) or (
                 i == iter_max - 1
             ):
                 print(f"VB has stopped after {i + 1} iterations.")
-                self.visualize(X)
                 break
 
+        # Highest Density Interval
+        self._calculate_hdi(X)
 
-def main(K):
-    return GMMVB(K)
+        # Visualisation
+        self.visualize(X)
+
+    def _calculate_hdi(self, X):
+        """Calculate the Highest Density Interval (HDI) for each cluster.
+
+        Args:
+            X (numpy ndarray): Input data whose size is (N, D).
+        Returns:
+            None.
+        """
+        N_RANDOM_SAMPLES = 100000
+
+        for k in range(self.K):
+
+            # Take 100k random samples of posterior
+            sample_data = multivariate_normal.rvs(
+                self.m[k, : self.D], self.W[k], N_RANDOM_SAMPLES
+            )
+            if len(sample_data.shape) == 1:
+                sample_data = np.expand_dims(sample_data, 1)
+
+            for d in range(self.D):
+                # Sort for a given dimension
+                sample_data_d = np.sort(sample_data[:, d])
+                # Mass is 95%
+                mass = int(N_RANDOM_SAMPLES * 0.95)
+
+                # Calculate L
+                range_i = range(N_RANDOM_SAMPLES - mass)
+                L = [sample_data_d[i + mass] - sample_data_d[i] for i in range_i]
+
+                # Find HDI for current dimension
+                i_s = np.argmin(L)
+                self.hdi[k][d] = [sample_data_d[i_s], sample_data_d[i_s + mass]]
 
 
 if __name__ == "__main__":
