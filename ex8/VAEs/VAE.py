@@ -4,6 +4,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 MNIST_SIZE = 28
 
@@ -56,10 +57,10 @@ class VAE(nn.Module):
         """
         # Apply encoding layers with ReLU
         x = self.enc_layer1(x)
-        x = nn.functional.relu(x)
+        x = F.relu(x)
 
         x = self.enc_layer2(x)
-        x = nn.functional.relu(x)
+        x = F.relu(x)
 
         # Compress into latent space
         mean = self.enc_fc3_mean(x)
@@ -94,19 +95,39 @@ class VAE(nn.Module):
         """
         # Apply decoding layers with ReLU
         z = self.dec_layer1(z)
-        z = nn.functional.relu(z)
+        z = F.relu(z)
 
         z = self.dec_layer2(z)
-        z = nn.functional.relu(z)
+        z = F.relu(z)
 
         z = self.dec_drop(z)
 
         # Use sigmoid for output layer
         z = self.dec_layer3(z)
-        z = nn.functional.sigmoid(z)
+        z = F.sigmoid(z)
 
         return z
 
-    def forward(self):
-        """# ToDo: Implement the forward function to return the following variables."""
+    def forward(self, x, device):
+        """Perform forward pass and return data and loss metrics.
+
+        Args:
+            x (torch.Tensor): Input data tensor
+        Returns:
+            list: [KL divergence, reconstruction loss]
+            torch.Tensor: Latent variable
+            torch.Tensor: Output data
+        """
+        # Use gpu if available
+        x = x.to(device)
+
+        # Encode
+        mean, log_var = self.encoder(x)
+
+        # Sample
+        z = self.sample_z(mean, log_var)
+
+        # Decode
+        y = self.decoder(z)
+
         # return [KL, reconstruction], z, y
