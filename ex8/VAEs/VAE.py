@@ -68,7 +68,7 @@ class VAE(nn.Module):
 
         return mean, log_var
 
-    def sample_z(self, mean: torch.Tensor, log_var: torch.Tensor):
+    def sample_z(self, mean: torch.Tensor, log_var: torch.Tensor, device: torch.device):
         """Retrieve sample from latent space.
 
         Args:
@@ -80,7 +80,7 @@ class VAE(nn.Module):
         input_shape = mean.shape  # (batch, dim)
 
         # Sample from standard normal distribution
-        sample_norm = torch.randn(input_shape)
+        sample_norm = torch.randn(input_shape, device=device)
 
         # Fit sample to be of the input distribution
         return mean + torch.exp(log_var * 0.5) * sample_norm
@@ -125,9 +125,17 @@ class VAE(nn.Module):
         mean, log_var = self.encoder(x)
 
         # Sample
-        z = self.sample_z(mean, log_var)
+        z = self.sample_z(mean, log_var, device)
 
         # Decode
         y = self.decoder(z)
 
-        # return [KL, reconstruction], z, y
+        # Calculate KL divergence loss
+        KL = 0.5 * torch.sum(1 + log_var - torch.square(mean) - torch.exp(log_var))
+
+        # Calculate reconstruction loss (eps to avoid log(0))
+        reconstruction = torch.sum(
+            x * torch.log(y + self.eps) + (1 - x) * torch.log(1 - y + self.eps)
+        )
+
+        return [KL, reconstruction], z, y
