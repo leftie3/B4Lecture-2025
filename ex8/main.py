@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """This file is for you to implement the main function."""
 
+import random
 import os
 
 import fire
 import numpy as np
 import torch
+import torch.backends
+import torch.backends.cuda
+import torch.backends.cudnn
 from libs.Visualize import Visualize
 from torch import optim
 from torchvision import datasets, transforms
@@ -24,6 +28,7 @@ class Main:
         num_max_epochs: int = 1000,
         do_train: bool = True,
         train_size_rate: float = 0.8,
+        seed: int = 42,
     ):
         """
         Set constructors.
@@ -46,6 +51,8 @@ class Main:
             Whether to train the model, by default True.
         train_size_rate : float, optional
             The ratio of the training data to the validation data, by default 0.8.
+        seed : int, optional
+            The seed to use for all RNGs.
         """
         self.z_dim = z_dim
         self.h_dim = h_dim
@@ -54,7 +61,21 @@ class Main:
         self.num_max_epochs = num_max_epochs
         self.do_train = do_train
         self.train_size_rate = train_size_rate
+        self.seed = seed
         self.batch_size = 625
+
+        # Set options for reproducibility
+        random.seed(self.seed)
+        np.random.seed(self.seed)
+        torch.manual_seed(self.seed)
+        torch.cuda.manual_seed_all(self.seed)
+        torch.use_deterministic_algorithms(True)
+
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
 
         self.dataloader_train = None
         self.dataloader_valid = None
@@ -150,6 +171,8 @@ class Main:
 
     def main(self):
         """Output the results of training and visualization."""
+
+        # Data loading
         self.createDirectories()
         self.createDataLoader()
 
