@@ -36,16 +36,16 @@ class VAE(nn.Module):
         # Model layers
 
         # Encoding
-        self.enc_layer1 = nn.Linear(self.x_dim, self.h_dim)
-        self.enc_layer2 = nn.Linear(self.h_dim, int(self.h_dim / 2))
+        self.enc_fc1 = nn.Linear(self.x_dim, self.h_dim)
+        self.enc_fc2 = nn.Linear(self.h_dim, int(self.h_dim / 2))
         self.enc_fc3_mean = nn.Linear(int(self.h_dim / 2), z_dim)
         self.enc_fc3_logvar = nn.Linear(int(self.h_dim / 2), z_dim)
 
         # Decoding
-        self.dec_layer1 = nn.Linear(z_dim, int(self.h_dim / 2))
-        self.dec_layer2 = nn.Linear(int(self.h_dim / 2), self.h_dim)
+        self.dec_fc1 = nn.Linear(z_dim, int(self.h_dim / 2))
+        self.dec_fc2 = nn.Linear(int(self.h_dim / 2), self.h_dim)
         self.dec_drop = nn.Dropout(self.drop_rate)
-        self.dec_layer3 = nn.Linear(self.h_dim, self.x_dim)
+        self.dec_fc3 = nn.Linear(self.h_dim, self.x_dim)
 
     def encoder(self, x):
         """Run data through the encoder model.
@@ -56,10 +56,10 @@ class VAE(nn.Module):
             (torch.Tensor, torch.Tensor): The mean and log variance tensors
         """
         # Apply encoding layers with ReLU
-        x = self.enc_layer1(x)
+        x = self.enc_fc1(x)
         x = F.relu(x)
 
-        x = self.enc_layer2(x)
+        x = self.enc_fc2(x)
         x = F.relu(x)
 
         # Compress into latent space
@@ -94,16 +94,16 @@ class VAE(nn.Module):
             torch.Tensor: The decoded data tensor.
         """
         # Apply decoding layers with ReLU
-        z = self.dec_layer1(z)
+        z = self.dec_fc1(z)
         z = F.relu(z)
 
-        z = self.dec_layer2(z)
+        z = self.dec_fc2(z)
         z = F.relu(z)
 
         z = self.dec_drop(z)
 
         # Use sigmoid for output layer
-        z = self.dec_layer3(z)
+        z = self.dec_fc3(z)
         z = F.sigmoid(z)
 
         return z
