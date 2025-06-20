@@ -13,7 +13,7 @@ import torch.backends.cudnn
 from libs.Visualize import Visualize
 from torch import optim
 from torchvision import datasets, transforms
-from VAEs.VAE import VAE
+from i_tzimas.VAE import VAE
 
 
 class Main:

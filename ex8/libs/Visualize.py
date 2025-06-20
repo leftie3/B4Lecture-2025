@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from matplotlib.animation import ArtistAnimation
+from sklearn.manifold import TSNE
 
 
 class Visualize:
@@ -66,17 +67,26 @@ class Visualize:
             fig_scatter, ax_scatter = plt.subplots(figsize=(9, 9))
             _, z, _ = self.model(data[0], self.device)
             z = z.cpu().detach().numpy()
+
+            z_tsne = TSNE().fit_transform(z)
+
+            # z[k, 0] and z[k, 1] are used for plotting in 2d
             for k in range(10):
                 cluster_indexes = np.where(data[1].cpu().detach().numpy() == k)[0]
                 ax_plot.plot(
-                    z[cluster_indexes, 0], z[cluster_indexes, 1], "o", ms=4, color=cm(k)
+                    z_tsne[cluster_indexes, 0],
+                    z_tsne[cluster_indexes, 1],
+                    "o",
+                    ms=4,
+                    color=cm(k),
                 )
                 ax_scatter.scatter(
-                    z[cluster_indexes, 0],
-                    z[cluster_indexes, 1],
+                    z_tsne[cluster_indexes, 0],
+                    z_tsne[cluster_indexes, 1],
                     marker=f"${k}$",
                     color=cm(k),
                 )
+
             fig_plot.savefig(
                 f"./images/latent_space/z_{self.z_dim}_{num_batch}_plot.png"
             )

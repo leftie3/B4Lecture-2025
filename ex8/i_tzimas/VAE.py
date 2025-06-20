@@ -38,18 +38,14 @@ class VAE(nn.Module):
         # Encoding
         self.enc_layer1 = nn.Linear(self.x_dim, self.h_dim)
         self.enc_layer2 = nn.Linear(self.h_dim, int(self.h_dim / 2))
-        self.enc_layer3 = nn.Linear(int(self.h_dim / 2), int(self.h_dim / 4))
-        self.enc_layer4 = nn.Linear(int(self.h_dim / 4), int(self.h_dim / 8))
-        self.enc_fc3_mean = nn.Linear(int(self.h_dim / 8), z_dim)
-        self.enc_fc3_logvar = nn.Linear(int(self.h_dim / 8), z_dim)
+        self.enc_fc3_mean = nn.Linear(int(self.h_dim / 2), z_dim)
+        self.enc_fc3_logvar = nn.Linear(int(self.h_dim / 2), z_dim)
 
         # Decoding
-        self.dec_layer1 = nn.Linear(z_dim, int(self.h_dim / 8))
-        self.dec_layer2 = nn.Linear(int(self.h_dim / 8), int(self.h_dim / 4))
-        self.dec_layer3 = nn.Linear(int(self.h_dim / 4), int(self.h_dim / 2))
-        self.dec_layer4 = nn.Linear(int(self.h_dim / 2), self.h_dim)
+        self.dec_layer1 = nn.Linear(z_dim, int(self.h_dim / 2))
+        self.dec_layer2 = nn.Linear(int(self.h_dim / 2), self.h_dim)
         self.dec_drop = nn.Dropout(self.drop_rate)
-        self.dec_layer5 = nn.Linear(self.h_dim, self.x_dim)
+        self.dec_layer3 = nn.Linear(self.h_dim, self.x_dim)
 
     def encoder(self, x):
         """Run data through the encoder model.
@@ -64,12 +60,6 @@ class VAE(nn.Module):
         x = F.relu(x)
 
         x = self.enc_layer2(x)
-        x = F.relu(x)
-
-        x = self.enc_layer3(x)
-        x = F.relu(x)
-
-        x = self.enc_layer4(x)
         x = F.relu(x)
 
         # Compress into latent space
@@ -110,16 +100,10 @@ class VAE(nn.Module):
         z = self.dec_layer2(z)
         z = F.relu(z)
 
-        z = self.dec_layer3(z)
-        z = F.relu(z)
-
-        z = self.dec_layer4(z)
-        z = F.relu(z)
-
         z = self.dec_drop(z)
 
         # Use sigmoid for output layer
-        z = self.dec_layer5(z)
+        z = self.dec_layer3(z)
         z = F.sigmoid(z)
 
         return z
