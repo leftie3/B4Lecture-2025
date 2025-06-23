@@ -1,4 +1,4 @@
-TO RUN THE CODE main.py NEEDS TO BE PLACED IN ex8/ AND IMPORT FROM i_tzimas/VAE
+TO RUN THE CODE main.py NEEDS TO BE PLACED IN ex8/ , Visualize.py IN libs/ AND IMPORT FROM i_tzimas/VAE
 
 Increase reproducibility:
 - Set constant seeds for RNGs in python, numpy, torch, cuda
